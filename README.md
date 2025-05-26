@@ -6,5 +6,5 @@ This repository contains supplementary materials for the EU Tax Observatory's Ma
 
 In the `Data` folder, you will find the following files:
 
-- `data_countries_appendix.xlsx`: Country-level data
-- `data_countries_appendix_usd.xlsx`: Country-level data harmonized to USD  
+- `data_countries_appendix.xlsx`: Country-level CRS data
+- `data_countries_appendix_usd.xlsx`: Country-level CRS data harmonized to USD  
