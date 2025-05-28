@@ -1,6 +1,6 @@
 # Assessing the coverage of the automatic exchange of information under the CRS
 
-This repository contains supplementary materials for the EU Tax Observatory's May 2025 report titled *"Assessing the coverage of the automatic exchange of information under the CRS"*.
+This repository contains supplementary materials for the EU Tax Observatory's May 2025 report No.7 titled *"Assessing the coverage of the automatic exchange of information under the CRS"*.
 
 ## Data
 
