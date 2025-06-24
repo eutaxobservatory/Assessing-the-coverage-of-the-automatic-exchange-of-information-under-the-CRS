@@ -1,0 +1,170 @@
+*Set data path;
+libname data '/sasdata/projects/Indsatsanalyse/CRS/Hjalte/Datasets';
+
+*Load data;
+data data;
+	set data.exampleData_randomsample;
+run;
+
+*If both CRS101 and CRS103 for the same account then take only CRS101;
+data data;
+  set data;
+  if EntityType = 'CRS101' then CRS101_temp = 1;
+  if EntityType = 'CRS102' then CRS102_temp = 1;
+  if EntityType = 'CRS103' then CRS103_temp = 1;
+run;
+proc sql;
+create table data as
+select *, sum(CRS101_temp) as CRS101, sum(CRS102_temp) as CRS102, sum(CRS103_temp) as CRS103 
+from data
+group by TransmittingCountry, AccountNumber, AcctHolderName;
+quit;
+data data;
+	set data;
+	if CRS101 >= 1 and CRS103 >= 1 and EntityType = 'CRS103' then DELETE;
+run;
+*Assign all the balance to only the beneficiary CPs;
+data data;
+  set data;
+  if ControllingPersonType in ('CRS801','CRS807','CRS812') then beneficiary_temp = 1;
+  else beneficiary_temp = 0;
+run;
+proc sql;
+create table data as
+select *, max(beneficiary_temp) as beneficiary 
+from data
+group by TransmittingCountry, AccountNumber, AcctHolderName;
+quit;
+data data;
+	set data;
+	if beneficiary = 1 and beneficiary_temp = 0 then DELETE;
+run;
+*Count number of account holders for each account;
+proc sql;
+create table data
+as select *, count(accountNumber) as number_holders
+from data 
+group by Year, TransmittingCountry, AccountNumber;
+quit;
+data data;
+	set data;
+	*Some accounts do not have an account number. We assume that these accounts only have one account holder;
+	if AccountNumber = '' then number_holders = 1;
+run;
+*Adjust balance by dividing by number of account holders;
+data data;
+	set data;
+	AccountBalanceAdjusted = AccountBalance / number_holders;
+run;
+
+
+******************************;
+*** Descriptive Statistics ***;
+******************************;
+*** Total balance ***;
+*First sum by account holder;
+proc summary data=data nway;
+	class OFC AcctHolderName;
+	var AccountBalance AccountBalanceAdjusted;
+	output out = overall (drop=_type_  rename=(_FREQ_=Number_of_accounts)) 
+	sum=;
+run;
+*Then aggregate to total;
+proc summary data=overall;
+	class OFC;
+	var Number_of_accounts AccountBalance AccountBalanceAdjusted;
+	output out = overall_total (drop=_type_  rename=(_FREQ_=Number_of_holders)) 
+	sum=;
+run;
+
+*** Only individuals ***;
+data individuals;
+	set data;
+	if AccountHolderType = 'Individual';
+run;
+proc summary data= individuals nway;
+	class OFC AcctHolderName;
+	var AccountBalance AccountBalanceAdjusted;
+	output out = individual_stat (drop=_type_  rename=(_FREQ_=Number_of_accounts)) sum=;
+run;
+proc summary data= individual_stat;
+	class OFC;
+	var Number_of_accounts AccountBalance AccountBalanceAdjusted;
+	output out = individual_stat_total (drop=_type_  rename=(_FREQ_=Number_of_holders)) sum=;
+run;
+
+*** Only entities ***;
+data entities;
+	set data;
+	if AccountHolderType = 'Entity';
+run;
+proc summary data= entities nway;
+	class OFC AcctHolderName;
+	var AccountBalance AccountBalanceAdjusted;
+	output out = firms_stat (drop=_type_  rename=(_FREQ_=Number_of_accounts)) sum=;
+run;
+proc summary data= firms_stat;
+	class OFC;
+	var Number_of_accounts AccountBalance AccountBalanceAdjusted;
+	output out = firms_stat_total (drop=_type_  rename=(_FREQ_=Number_of_holders)) sum=;
+run;
+*Only CRS101 entities;
+data CRS101;
+	set entities;
+	if EntityType = 'CRS101';
+run;
+proc summary data= CRS101 nway;
+	class OFC AcctHolderName;
+	var AccountBalance AccountBalanceAdjusted;
+	output out = CRS101_stat (drop=_type_  rename=(_FREQ_=Number_of_accounts)) sum=;
+run;
+proc summary data= CRS101_stat;
+	class OFC;
+	var Number_of_accounts AccountBalance AccountBalanceAdjusted;
+	output out = CRS101_stat_total (drop=_type_  rename=(_FREQ_=Number_of_holders)) sum=;
+run;
+*Only beneficiary owners in CRS101 entities;
+data beneficiary;
+	set entities;
+	if ControllingPersonType in ('CRS801','CRS807','CRS812');
+run;
+proc summary data= beneficiary nway;
+	class OFC AcctHolderName;
+	var AccountBalance AccountBalanceAdjusted;
+	output out = beneficiary_stat (drop=_type_  rename=(_FREQ_=Number_of_accounts)) sum=;
+run;
+proc summary data= beneficiary_stat;
+	class OFC;
+	var Number_of_accounts AccountBalance AccountBalanceAdjusted;
+	output out = beneficiary_stat_total (drop=_type_  rename=(_FREQ_=Number_of_holders)) sum=;
+run;
+*Only CRS102 entities;
+data CRS102;
+	set entities;
+	if EntityType = 'CRS102';
+run;
+proc summary data= CRS102 nway;
+	class OFC AcctHolderName;
+	var AccountBalance AccountBalanceAdjusted;
+	output out = CRS102_stat (drop=_type_  rename=(_FREQ_=Number_of_accounts)) sum=;
+run;
+proc summary data= CRS102_stat;
+	class OFC;
+	var Number_of_accounts AccountBalance AccountBalanceAdjusted;
+	output out = CRS102_stat_total (drop=_type_  rename=(_FREQ_=Number_of_holders)) sum=;
+run;
+*Only CRS103 entities;
+data CRS103;
+	set entities;
+	if EntityType = 'CRS103';
+run;
+proc summary data= CRS103 nway;
+	class OFC AcctHolderName;
+	var AccountBalance AccountBalanceAdjusted;
+	output out = CRS103_stat (drop=_type_  rename=(_FREQ_=Number_of_accounts)) sum=;
+run;
+proc summary data= CRS103_stat;
+	class OFC;
+	var Number_of_accounts AccountBalance AccountBalanceAdjusted;
+	output out = CRS103_stat_total (drop=_type_  rename=(_FREQ_=Number_of_holders)) sum=;
+run;
